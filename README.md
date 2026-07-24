@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IPF Knowledge
 
-## Getting Started
+Field knowledge capture for **IP Filtration** — a dead-simple mobile web app to snap photos of units, business cards, or anything worth keeping, add a note, and store it all in one place so it's never lost.
 
-First, run the development server:
+Built with Next.js 16 (App Router) + Supabase (Auth, Postgres, Storage). Deploys on Vercel.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## What it does (v1)
+
+- **Login** — invite-only. Each person gets their own account, so every capture is stamped with who took it.
+- **Home** — one big **Capture Knowledge** button. (More buttons can be added here later.)
+- **Capture Knowledge** — take photos with the camera or pull from the camera roll (multiple photos per capture), type a note, and save. A "Recent captures" list confirms it landed.
+
+Everything is stored in Supabase (photos in a private Storage bucket, notes + metadata in Postgres). A future step can push each capture out to a destination folder (e.g. Google Drive).
+
+## Tech
+
+| Layer | What |
+|------|------|
+| Framework | Next.js 16, TypeScript, Tailwind CSS |
+| Auth | Supabase Auth (email + password, invite-only) |
+| Database | Supabase Postgres — `captures` table, row-level security |
+| Photos | Supabase Storage — private `knowledge-photos` bucket |
+| Hosting | Vercel |
+
+## Environment variables
+
+Copy `.env.example` to `.env.local` and fill in (these are the Supabase project's publishable values — safe to expose):
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xsddwkkowulatcxeqaur.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The Supabase project (`ipf-knowledge`, Warhorse org) is already created with the schema, storage bucket, and security policies applied.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Run locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev
+# open http://localhost:3000
+```
 
-## Learn More
+## Deploy (Vercel)
 
-To learn more about Next.js, take a look at the following resources:
+1. Push this repo to GitHub.
+2. In Vercel → **Add New → Project** → import the repo.
+3. Add the two environment variables above.
+4. Deploy. Open the URL on your phone and "Add to Home Screen".
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Adding people (invite-only)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+There is no public sign-up. Add users in the Supabase dashboard:
 
-## Deploy on Vercel
+**Authentication → Users → Add user → Create new user** → enter email + password → check **Auto Confirm User** → Create. Share those credentials with the person; they can sign in immediately.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Data model
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`captures`
+- `id` uuid
+- `created_at` timestamptz
+- `created_by` uuid → auth.users
+- `created_by_email` text
+- `note` text
+- `photo_paths` text[] — storage paths in `knowledge-photos`
+
+Photos live at `knowledge-photos/<user-id>/<capture-id>/<nn>.<ext>`. Any signed-in teammate can view all captures (institutional knowledge); you can only create/edit/delete under your own account.
