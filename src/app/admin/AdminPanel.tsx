@@ -109,21 +109,30 @@ function appUrl(): string {
     : "https://ipf-knowledge-w9bq.vercel.app";
 }
 
+// Phones and mail clients only turn a URL into a tappable link when it stands
+// clear of every other character: full https:// scheme, whitespace on both
+// sides, no trailing punctuation. Blank lines above and below do that AND make
+// the link easy to spot. The leading/trailing spaces on the URL line are belt
+// and braces: a few Android SMS handlers collapse the newlines out of a
+// `sms:` body, and without them the URL would fuse to the words around it and
+// stop being detected. Body stays pure ASCII so SMS doesn't flip to UCS-2
+// (which shortens the segment limit and can truncate the message mid-link).
 function buildInstructions(email: string): string {
   return [
-    "IPF Knowledge — field app",
+    "IPF Knowledge - field app",
     "",
-    "Tap this link on your phone to open the app:",
-    appUrl(),
+    "Open the app here:",
+    "",
+    ` ${appUrl()} `,
     "",
     "Your login:",
     `Email: ${email}`,
     `Temporary password: ${TEMP_PASSWORD}`,
-    "(You'll set your own password on first sign-in.)",
+    "(You set your own password on first sign-in.)",
     "",
     "Then add it to your home screen so it works like an app:",
-    '• iPhone (Safari): tap the Share button, then "Add to Home Screen".',
-    '• Android (Chrome): tap the ⋮ menu, then "Add to Home screen" (or "Install app").',
+    '- iPhone (Safari): tap the Share button, then "Add to Home Screen".',
+    '- Android (Chrome): tap the 3-dot menu, then "Add to Home screen" (or "Install app").',
   ].join("\n");
 }
 
