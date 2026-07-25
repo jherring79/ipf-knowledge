@@ -147,7 +147,7 @@ export default function CaptureForm() {
         <div className="mt-8 flex w-full flex-col gap-3">
           <button
             onClick={() => setDone(false)}
-            className="rounded-xl bg-amber-500 px-4 py-3.5 text-base font-semibold text-slate-950 transition active:scale-[0.99]"
+            className="rounded-xl bg-burnt-500 px-4 py-3.5 text-base font-semibold text-white transition active:scale-[0.99]"
           >
             Capture another
           </button>
@@ -193,7 +193,7 @@ export default function CaptureForm() {
           onClick={() => cameraInput.current?.click()}
           className="flex flex-col items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/60 py-6 transition active:scale-[0.98]"
         >
-          <span className="text-amber-500">
+          <span className="text-burnt-500">
             <CameraIcon />
           </span>
           <span className="text-sm font-medium text-slate-200">Take photo</span>
@@ -202,7 +202,7 @@ export default function CaptureForm() {
           onClick={() => libraryInput.current?.click()}
           className="flex flex-col items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/60 py-6 transition active:scale-[0.98]"
         >
-          <span className="text-amber-500">
+          <span className="text-burnt-500">
             <LibraryIcon />
           </span>
           <span className="text-sm font-medium text-slate-200">
@@ -262,7 +262,7 @@ export default function CaptureForm() {
           onChange={(e) => setNote(e.target.value)}
           rows={6}
           placeholder="Unit details, serial numbers, site name, what this is, who to call — anything worth keeping."
-          className="resize-none rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-base text-white outline-none transition focus:border-amber-500"
+          className="resize-none rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-base text-white outline-none transition focus:border-burnt-500"
         />
       </label>
 
@@ -276,7 +276,7 @@ export default function CaptureForm() {
         <button
           onClick={save}
           disabled={saving}
-          className="w-full rounded-xl bg-amber-500 px-4 py-4 text-base font-semibold text-slate-950 transition active:scale-[0.99] disabled:opacity-60"
+          className="w-full rounded-xl bg-burnt-500 px-4 py-4 text-base font-semibold text-white transition active:scale-[0.99] disabled:opacity-60"
         >
           {saving ? progress ?? "Saving…" : "Save knowledge"}
         </button>

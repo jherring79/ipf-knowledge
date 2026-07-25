@@ -43,7 +43,7 @@ export default function LoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-base text-white outline-none transition focus:border-amber-500"
+          className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-base text-white outline-none transition focus:border-burnt-500"
           placeholder="you@company.com"
         />
       </label>
@@ -56,7 +56,7 @@ export default function LoginForm() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-base text-white outline-none transition focus:border-amber-500"
+          className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-base text-white outline-none transition focus:border-burnt-500"
           placeholder="••••••••"
         />
       </label>
@@ -70,7 +70,7 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={busy}
-        className="mt-2 rounded-xl bg-amber-500 px-4 py-3.5 text-base font-semibold text-slate-950 transition active:scale-[0.99] disabled:opacity-60"
+        className="mt-2 rounded-xl bg-burnt-500 px-4 py-3.5 text-base font-semibold text-white transition active:scale-[0.99] disabled:opacity-60"
       >
         {busy ? "Signing in…" : "Sign in"}
       </button>

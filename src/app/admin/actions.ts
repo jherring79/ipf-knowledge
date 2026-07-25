@@ -58,6 +58,41 @@ export async function createUserAction(
   return { ok: true };
 }
 
+export async function resetPasswordAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireAdmin();
+
+  const userId = String(formData.get("user_id") ?? "");
+  if (!userId) return { ok: false, error: "Missing user id." };
+
+  const admin = createAdminClient();
+
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    password: TEMP_PASSWORD,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  // Re-require a password change on next login (except for the admin's own
+  // account, which is exempt from the gate anyway).
+  if (userId !== session.user!.id) {
+    const { error: profErr } = await admin
+      .from("profiles")
+      .update({ must_change_password: true })
+      .eq("id", userId);
+    if (profErr) {
+      return {
+        ok: false,
+        error: `Password reset, but flag update failed: ${profErr.message}`,
+      };
+    }
+  }
+
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
 export async function deleteUserAction(
   _prev: ActionResult | null,
   formData: FormData,

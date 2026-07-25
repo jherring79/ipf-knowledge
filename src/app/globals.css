@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@theme {
+  /* Texas burnt orange — Longhorn palette */
+  --color-burnt-400: #e87722; /* lighter accent for text/icons on dark */
+  --color-burnt-500: #bf5700; /* primary — classic burnt orange */
+  --color-burnt-600: #9c4700; /* pressed / gradient dark end */
+  --color-burnt-900: #451f00; /* shadows */
+}
+
 :root {
   color-scheme: dark;
 }

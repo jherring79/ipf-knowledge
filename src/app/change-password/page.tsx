@@ -11,13 +11,18 @@ export default async function ChangePasswordPage() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6">
       <div className="mb-8 text-center">
-        <p className="text-sm font-semibold tracking-widest text-amber-500">
+        <p className="text-sm font-semibold tracking-widest text-burnt-500">
           IP FILTRATION
         </p>
-        <h1 className="mt-1 text-2xl font-bold text-white">Set your password</h1>
+        <h1 className="mt-1 text-2xl font-bold text-white">
+          {session.profile?.must_change_password
+            ? "Set your password"
+            : "Change your password"}
+        </h1>
         <p className="mt-2 text-sm text-slate-400">
-          Welcome{session.profile?.full_name ? `, ${session.profile.full_name}` : ""}.
-          Choose a new password to finish setting up your account.
+          {session.profile?.must_change_password
+            ? `Welcome${session.profile?.full_name ? `, ${session.profile.full_name}` : ""}. Choose a new password to finish setting up your account.`
+            : "Pick a new password. You'll stay signed in."}
         </p>
       </div>
       <ChangePasswordForm />
