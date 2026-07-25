@@ -1,12 +1,22 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth";
-import CaptureForm from "./CaptureForm";
+import { requireAdmin, type Profile } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import AdminPanel from "./AdminPanel";
 
-export const metadata = { title: "Capture · IPF Knowledge" };
+export const metadata = { title: "Users · IPF Knowledge" };
 export const dynamic = "force-dynamic";
 
-export default async function CapturePage() {
-  await requireUser();
+export default async function AdminPage() {
+  const session = await requireAdmin();
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  const users = (data as Profile[] | null) ?? [];
+
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pt-6">
       <header className="flex items-center gap-3">
@@ -29,10 +39,13 @@ export default async function CapturePage() {
             <path d="m15 18-6-6 6-6" />
           </svg>
         </Link>
-        <h1 className="text-lg font-semibold text-white">Capture Knowledge</h1>
+        <div>
+          <h1 className="text-lg font-semibold text-white">Manage users</h1>
+          <p className="text-xs text-slate-500">Admin · {session.user!.email}</p>
+        </div>
       </header>
 
-      <CaptureForm />
+      <AdminPanel initialUsers={users} adminId={session.user!.id} />
     </main>
   );
 }

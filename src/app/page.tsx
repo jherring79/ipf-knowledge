@@ -1,15 +1,12 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import SignOutButton from "@/components/SignOutButton";
 import RecentCaptures from "@/components/RecentCaptures";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, isAdmin } = await requireUser();
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pt-8">
@@ -48,6 +45,19 @@ export default async function Home() {
           </span>
         </Link>
       </div>
+
+      {isAdmin && (
+        <Link
+          href="/admin"
+          className="mt-3 flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-sm text-slate-300 transition active:scale-[0.99]"
+        >
+          <UsersIcon />
+          Manage users
+          <span className="ml-auto text-slate-600">
+            <ChevronIcon />
+          </span>
+        </Link>
+      )}
 
       <section className="mt-10 flex-1">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-500">
@@ -98,6 +108,26 @@ function ChevronIcon() {
       aria-hidden="true"
     >
       <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
+function UsersIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11" />
     </svg>
   );
 }
