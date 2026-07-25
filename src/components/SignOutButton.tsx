@@ -1,19 +1,17 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SignOutButton() {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function signOut() {
     setBusy(true);
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.replace("/login");
-    router.refresh();
+    // Hard navigation so the server clears the session cookie cleanly.
+    window.location.assign("/login");
   }
 
   return (

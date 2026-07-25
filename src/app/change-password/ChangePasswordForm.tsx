@@ -1,12 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { clearPasswordFlag } from "./actions";
 
 export default function ChangePasswordForm() {
-  const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -34,15 +32,22 @@ export default function ChangePasswordForm() {
       return;
     }
 
-    const res = await clearPasswordFlag();
-    if (!res.ok) {
-      setError(res.error ?? "Could not finish setup. Try again.");
+    try {
+      const res = await clearPasswordFlag();
+      if (!res.ok) {
+        setError(res.error ?? "Could not finish setup. Try again.");
+        setBusy(false);
+        return;
+      }
+    } catch {
+      setError("Could not finish setup. Please try again.");
       setBusy(false);
       return;
     }
 
-    router.replace("/");
-    router.refresh();
+    // The auth token just changed. A hard navigation lets the server re-read
+    // the fresh session cleanly and avoids a client-router hang after refresh.
+    window.location.assign("/");
   }
 
   return (
