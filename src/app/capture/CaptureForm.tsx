@@ -264,6 +264,16 @@ export default function CaptureForm() {
           placeholder="Unit details, serial numbers, site name, what this is, who to call — anything worth keeping."
           className="resize-none rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-base text-white outline-none transition focus:border-burnt-500"
         />
+        {/* Dictation is the phone keyboard's own, not ours: iOS and Android both
+            put a mic key on the keyboard for any textarea, and nothing here
+            blocks it. That beats a custom speech-API button in the field --
+            it handles long rambling notes and punctuation commands, and needs
+            no extra mic permission. This hint just makes sure the guys know
+            it's there. */}
+        <span className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+          <MicIcon />
+          Talk instead of typing — tap the microphone on your keyboard.
+        </span>
       </label>
 
       {error && (
@@ -290,6 +300,26 @@ function extFor(file: File) {
   if (fromType) return fromType.replace("jpeg", "jpg");
   const fromName = file.name.split(".").pop();
   return (fromName || "jpg").toLowerCase();
+}
+
+function MicIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="shrink-0"
+    >
+      <rect x="9" y="2" width="6" height="11" rx="3" />
+      <path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4" />
+    </svg>
+  );
 }
 
 function CameraIcon() {
