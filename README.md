@@ -12,6 +12,20 @@ Built with Next.js 16 (App Router) + Supabase (Auth, Postgres, Storage). Deploys
 
 Everything is stored in Supabase (photos in a private Storage bucket, notes + metadata in Postgres). A future step can push each capture out to a destination folder (e.g. Google Drive).
 
+## Works with no service (v2)
+
+Half the places worth capturing — SWD sites, lease roads, the yard — have no signal. The app is built so that never matters.
+
+- **The app opens with no bars.** A service worker (`public/sw.js`) keeps a copy of the home and capture screens, so tapping the home-screen icon out of range brings up the app, not a browser error. Requires the app to have been opened online at least once, and to be added to the home screen.
+- **Save always writes to the phone first.** Every capture goes into IndexedDB (`src/lib/offline/db.ts`) *before* any network call — so a connection that dies mid-upload can't lose a photo. Uploading is a separate, retryable step.
+- **Photos are shrunk on capture** to 1600 px on the long edge, JPEG q0.82 (`src/lib/offline/image.ts`). A 3–4 MB camera photo becomes ~250–400 KB: many more captures fit on the phone, and uploads finish on one bar. Nameplates and serial stamps stay readable. Anything that fails to decode is queued at full size rather than dropped.
+- **Sync happens by itself** (`src/lib/offline/sync.ts`) when service returns, when the app is reopened, and on a 45-second retry timer while anything is still waiting. `navigator.onLine` is not trusted on its own — it reports "online" on a dead connection, which is why the timer exists. There's also a manual **Sync now** button.
+- **Sync is idempotent.** Storage paths are derived from the capture id, and the row uses that same id as its primary key, so a retry after a half-finished upload resumes rather than duplicating. "Already exists" and duplicate-key responses are treated as success. Uploads checkpoint after each photo.
+- **`captured_at` vs `created_at`.** `captured_at` is when the photo was taken in the field; `created_at` is when it reached the database. A capture taken Tuesday with no signal still sorts under Tuesday after it syncs on Thursday, and the list marks it "captured offline".
+- **Signing out with captures still queued** asks for confirmation first, and clears the cached per-user screens from the service worker.
+
+**Known limit:** iOS does not run background sync for web apps. On an iPhone, queued captures upload when the app is open (which the retry timer handles within seconds of regaining service) — not while it sits closed in a pocket. Nothing is lost either way; it just needs the app opened once back in range. Android/Chrome behaves the same way here by design, rather than depending on a Background Sync API that iOS lacks.
+
 ## Tech
 
 | Layer | What |

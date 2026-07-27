@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import OfflineProvider from "@/components/OfflineProvider";
+import OfflineBanner from "@/components/OfflineBanner";
 
 export const metadata: Metadata = {
   title: "IPF Knowledge",
@@ -25,7 +27,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className="min-h-dvh bg-slate-950 text-slate-100 antialiased">
-        {children}
+        {/* Wraps every screen: registers the service worker, watches
+            connectivity, and drains the offline queue whenever service
+            comes back. */}
+        <OfflineProvider>
+          <OfflineBanner />
+          {children}
+        </OfflineProvider>
       </body>
     </html>
   );

@@ -6,7 +6,7 @@ export const metadata = { title: "Capture · IPF Knowledge" };
 export const dynamic = "force-dynamic";
 
 export default async function CapturePage() {
-  await requireUser();
+  const { user } = await requireUser();
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pt-6">
       <header className="flex items-center gap-3">
@@ -32,7 +32,11 @@ export default async function CapturePage() {
         <h1 className="text-lg font-semibold text-white">Capture Knowledge</h1>
       </header>
 
-      <CaptureForm />
+      {/* Identity is baked into the page here rather than looked up in the
+          browser, because the capture screen has to work with no signal: the
+          service worker replays this cached HTML, and the queued capture still
+          knows who took it. */}
+      <CaptureForm userId={user!.id} userEmail={user!.email ?? null} />
     </main>
   );
 }

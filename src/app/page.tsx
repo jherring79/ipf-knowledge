@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import SignOutButton from "@/components/SignOutButton";
 import RecentCaptures from "@/components/RecentCaptures";
+import PendingUploads from "@/components/PendingUploads";
 import Longhorns from "@/components/Longhorns";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,9 @@ export default async function Home() {
           </span>
         </Link>
       </div>
+
+      {/* Anything captured but not yet in the database, with a manual sync. */}
+      <PendingUploads />
 
       {isAdmin && (
         <Link

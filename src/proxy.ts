@@ -11,7 +11,12 @@ export const config = {
     /*
      * Run on every real page load except static assets and image files, so
      * the Supabase session stays fresh and protected routes are guarded.
+     *
+     * sw.js and offline.html are excluded deliberately: the service worker
+     * must be served as a script from the root scope (not redirected to
+     * /login), and the offline fallback page has to be reachable with no
+     * session in hand.
      */
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon.svg|apple-icon.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline.html|icon.svg|apple-icon.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

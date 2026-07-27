@@ -2,7 +2,9 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { enqueue } from "@/lib/offline/db";
+import { prepareImage } from "@/lib/offline/image";
+import { useOffline } from "@/components/OfflineProvider";
 
 type Staged = {
   id: string;
@@ -10,19 +12,26 @@ type Staged = {
   url: string;
 };
 
-const BUCKET = "knowledge-photos";
+type SavedState = "uploaded" | "queued";
 
-export default function CaptureForm() {
+export default function CaptureForm({
+  userId,
+  userEmail,
+}: {
+  userId: string;
+  userEmail: string | null;
+}) {
   const router = useRouter();
   const cameraInput = useRef<HTMLInputElement>(null);
   const libraryInput = useRef<HTMLInputElement>(null);
+  const { online, syncNow } = useOffline();
 
   const [photos, setPhotos] = useState<Staged[]>([]);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState<SavedState | null>(null);
 
   function addFiles(list: FileList | null) {
     if (!list || list.length === 0) return;
@@ -54,6 +63,11 @@ export default function CaptureForm() {
     setProgress(null);
   }
 
+  /**
+   * Save = write to the phone first, always. Uploading is a second, optional
+   * step. That order is the whole point: signal can vanish between tapping
+   * Save and the first byte leaving the phone, and the capture still survives.
+   */
   async function save() {
     setError(null);
 
@@ -63,59 +77,41 @@ export default function CaptureForm() {
     }
 
     setSaving(true);
-    const supabase = createClient();
-
-    const {
-      data: { user },
-      error: userErr,
-    } = await supabase.auth.getUser();
-
-    if (userErr || !user) {
-      setError("Your session expired. Please sign in again.");
-      setSaving(false);
-      router.replace("/login");
-      return;
-    }
-
-    const captureId = crypto.randomUUID();
-    const uploadedPaths: string[] = [];
 
     try {
+      const prepared: { blob: Blob; type: string }[] = [];
       for (let i = 0; i < photos.length; i++) {
-        setProgress(`Uploading photo ${i + 1} of ${photos.length}…`);
-        const p = photos[i];
-        const ext = extFor(p.file);
-        const path = `${user.id}/${captureId}/${String(i).padStart(
-          2,
-          "0",
-        )}.${ext}`;
-
-        const { error: upErr } = await supabase.storage
-          .from(BUCKET)
-          .upload(path, p.file, {
-            contentType: p.file.type || "image/jpeg",
-            upsert: false,
-          });
-
-        if (upErr) throw new Error(`Photo upload failed: ${upErr.message}`);
-        uploadedPaths.push(path);
+        setProgress(`Preparing photo ${i + 1} of ${photos.length}…`);
+        prepared.push(await prepareImage(photos[i].file));
       }
 
-      setProgress("Saving…");
-      const { error: insErr } = await supabase.from("captures").insert({
-        id: captureId,
-        note: note.trim() || null,
-        photo_paths: uploadedPaths,
-        created_by: user.id,
-        created_by_email: user.email ?? null,
+      setProgress("Saving to this phone…");
+      await enqueue({
+        id: crypto.randomUUID(),
+        note,
+        photos: prepared,
+        createdAt: Date.now(),
+        userId,
+        userEmail,
       });
 
-      if (insErr) throw new Error(`Save failed: ${insErr.message}`);
+      // Safely on the device now. Try to push it up right away; if that fails
+      // or we're offline, the sync engine picks it up later on its own.
+      let wentUp = false;
+      if (online) {
+        setProgress("Uploading…");
+        await syncNow();
+        wentUp = navigator.onLine;
+      }
 
       reset();
-      setDone(true);
+      setDone(wentUp ? "uploaded" : "queued");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Couldn't save to this phone. Try again.",
+      );
     } finally {
       setSaving(false);
       setProgress(null);
@@ -124,41 +120,11 @@ export default function CaptureForm() {
 
   if (done) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center py-16 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
-          <svg
-            width="34"
-            height="34"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M20 6 9 17l-5-5" />
-          </svg>
-        </div>
-        <h2 className="mt-4 text-xl font-semibold text-white">Saved</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Your knowledge is stored and won&apos;t be lost.
-        </p>
-        <div className="mt-8 flex w-full flex-col gap-3">
-          <button
-            onClick={() => setDone(false)}
-            className="rounded-xl bg-burnt-500 px-4 py-3.5 text-base font-semibold text-white transition active:scale-[0.99]"
-          >
-            Capture another
-          </button>
-          <button
-            onClick={() => router.push("/")}
-            className="rounded-xl border border-slate-700 px-4 py-3.5 text-base font-medium text-slate-200 transition active:scale-[0.99]"
-          >
-            Back to home
-          </button>
-        </div>
-      </div>
+      <SavedScreen
+        state={done}
+        onAgain={() => setDone(null)}
+        onHome={() => router.push("/")}
+      />
     );
   }
 
@@ -187,6 +153,14 @@ export default function CaptureForm() {
           e.target.value = "";
         }}
       />
+
+      {!online && (
+        <p className="mt-4 rounded-xl border border-burnt-500/40 bg-burnt-500/10 px-3.5 py-3 text-sm leading-relaxed text-burnt-400">
+          <span className="font-semibold">No service right now.</span> Keep
+          shooting — everything saves to this phone and uploads by itself when
+          you get back in range.
+        </p>
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-3">
         <button
@@ -268,8 +242,9 @@ export default function CaptureForm() {
             put a mic key on the keyboard for any textarea, and nothing here
             blocks it. That beats a custom speech-API button in the field --
             it handles long rambling notes and punctuation commands, and needs
-            no extra mic permission. This hint just makes sure the guys know
-            it's there. */}
+            no extra mic permission. It also keeps working with no signal,
+            since dictation runs on-device. This hint just makes sure the guys
+            know it's there. */}
         <span className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
           <MicIcon />
           Talk instead of typing — tap the microphone on your keyboard.
@@ -288,18 +263,98 @@ export default function CaptureForm() {
           disabled={saving}
           className="w-full rounded-xl bg-burnt-500 px-4 py-4 text-base font-semibold text-white transition active:scale-[0.99] disabled:opacity-60"
         >
-          {saving ? progress ?? "Saving…" : "Save knowledge"}
+          {saving ? (progress ?? "Saving…") : "Save knowledge"}
         </button>
       </div>
     </div>
   );
 }
 
-function extFor(file: File) {
-  const fromType = file.type.split("/")[1];
-  if (fromType) return fromType.replace("jpeg", "jpg");
-  const fromName = file.name.split(".").pop();
-  return (fromName || "jpg").toLowerCase();
+function SavedScreen({
+  state,
+  onAgain,
+  onHome,
+}: {
+  state: SavedState;
+  onAgain: () => void;
+  onHome: () => void;
+}) {
+  const queued = state === "queued";
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center py-16 text-center">
+      <div
+        className={`flex h-16 w-16 items-center justify-center rounded-full ${
+          queued
+            ? "bg-burnt-500/15 text-burnt-400"
+            : "bg-emerald-500/15 text-emerald-400"
+        }`}
+      >
+        {queued ? <PhoneIcon /> : <CheckIcon />}
+      </div>
+      <h2 className="mt-4 text-xl font-semibold text-white">
+        {queued ? "Saved to this phone" : "Saved"}
+      </h2>
+      <p className="mt-1 max-w-xs text-sm leading-relaxed text-slate-400">
+        {queued
+          ? "It'll upload by itself as soon as you're back in service. You can close the app — it won't be lost."
+          : "Your knowledge is stored and won't be lost."}
+      </p>
+      <div className="mt-8 flex w-full flex-col gap-3">
+        <button
+          onClick={onAgain}
+          className="rounded-xl bg-burnt-500 px-4 py-3.5 text-base font-semibold text-white transition active:scale-[0.99]"
+        >
+          Capture another
+        </button>
+        <button
+          onClick={onHome}
+          className="rounded-xl border border-slate-700 px-4 py-3.5 text-base font-medium text-slate-200 transition active:scale-[0.99]"
+        >
+          Back to home
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="34"
+      height="34"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+function PhoneIcon() {
+  return (
+    <svg
+      width="30"
+      height="30"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="5" y="2" width="14" height="20" rx="2.5" />
+      <path d="M11 18.5h2" />
+      <path d="M9.5 9 12 11.5 14.5 9" />
+      <path d="M12 5.5v6" />
+    </svg>
+  );
 }
 
 function MicIcon() {
